@@ -1,7 +1,43 @@
 import telebot as tb
 import random
+import os
+from dotenv import load_dotenv
+import pandas as pd
+import datetime
+import schedule as sc
+import time
 
-bot = tb.TeleBot("7595047242:AAHIpE81azO9focgvhnrb0jFHvdDD1G0_8U", parse_mode = "none")
+
+planilha = 'aniversarios.ods'
+
+# Carregamento do token do bot e inicialização do bot
+load_dotenv()
+bot = tb.TeleBot(os.getenv("BOT_TOKEN"), parse_mode = "none")
+
+# Envia diariamente mensagens dando feliz aniversario pros aniversariantes do dia
+def niver_diario():
+    print("[LOG] Função niver_diario foi chamada")
+    hoje = datetime.date.today()
+    dia, mes = hoje.day, hoje.month
+
+    try: 
+        df = pd.read_excel(planilha, engine="odf")
+        df['aniversario'] = pd.to_datetime(df['aniversario'])
+
+        aniversariantes = df[
+            (df['aniversario'].dt.day == dia) & (df['aniversario'].dt.month == mes)
+        ]
+        print(aniversariantes)
+
+        for _, row, in aniversariantes.iterrows():
+            username = row['username']
+            mensagem = f"Parabéns, @{username}!"
+            bot.send_message(chat_id=-4677092344, text=mensagem)
+
+    except Exception as e:
+        print(f"Erro ao verificar aniversários: {e}")
+
+sc.every().day.at("10:08").do(niver_diario)
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message:tb.types.Message):
@@ -28,6 +64,28 @@ def sorteio(message:tb.types.Message):
     except ValueError:
         bot.reply_to(message, "Algum erro ocorreu. Verifique se os números dados são inteiros.")
 
+@bot.message_handler(['aniversariantes'])
+def aniversariantes(message:tb.types.Message):
+    df = pd.read_excel(planilha, engine="odf")
+    df['aniversario'] = pd.to_datetime(df['aniversario'])
 
+    lista = []
+
+    for _, row in df.iterrows():
+        nome = row['nome']
+        data = row['aniversario'].strftime('%d/%m')
+        lista.append(f". {nome} -> {data}")
+
+        reply = "Lista de aniversários: *\n" + "\n".join(lista)
+
+    bot.reply_to(message, reply)
+    
+@bot.message_handler(['chat_id'])
+def pega_id(message:tb.types.Message):
+    bot.reply_to(message, f"ID; {message.chat.id}")
 
 bot.infinity_polling()
+
+while True:
+    sc.run_pending()
+    time.sleep(1)
