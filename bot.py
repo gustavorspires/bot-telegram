@@ -6,6 +6,7 @@ import pandas as pd
 import datetime
 import schedule as sc
 import time
+import random
 
 
 planilha = 'aniversarios.ods'
@@ -21,7 +22,7 @@ def niver_diario():
     dia, mes = hoje.day, hoje.month
 
     try: 
-        df = pd.read_excel(planilha, engine="odf")
+        df = pd.read_excel(planilha, engine="odf", sheet_name="aniversarios")
         df['aniversario'] = pd.to_datetime(df['aniversario'])
 
         aniversariantes = df[
@@ -31,17 +32,15 @@ def niver_diario():
 
         for _, row, in aniversariantes.iterrows():
             username = row['username']
-            mensagem = f"Parabéns, @{username}!"
+            mensagem = f"Feliz aniversário, @{username}! Aproveite seu dia!"
             bot.send_message(chat_id=-4677092344, text=mensagem)
 
     except Exception as e:
         print(f"Erro ao verificar aniversários: {e}")
 
-sc.every().day.at("10:08").do(niver_diario)
-
 @bot.message_handler(commands=['start', 'help'])
 def start(message:tb.types.Message):
-    bot.reply_to(message, "Olá, eu sou o bot do Da Roca! (ou o Da Roca é meu bot? Veremos. =)")
+    bot.reply_to(message, "Olá, eu sou o bot do Da Roca! (ou o Da Roca é meu bot? Veremos. =)\n *Funcionalidades*\n\n- _/sorteio <min> <max>_ - sorteia um inteiro no intervalo inserido;\n- _/engracado_ - coisas funny\n- _/aniversariantes_ - mostra uma lista de aniversariantes\n- _/presente_ - Gerador de ideias de presente Ultra Hiper Mega Blaster bão dimais da conta\n- _/amigosecreto_ - em construção\n- _/about_ - em construção\n- _/spotify_ - em construção\n")
 
 @bot.message_handler(['engracado'])
 def engracado(message:tb.types.Message):
@@ -66,7 +65,7 @@ def sorteio(message:tb.types.Message):
 
 @bot.message_handler(['aniversariantes'])
 def aniversariantes(message:tb.types.Message):
-    df = pd.read_excel(planilha, engine="odf")
+    df = pd.read_excel(planilha, engine="odf", sheet_name="aniversarios")
     df['aniversario'] = pd.to_datetime(df['aniversario'])
 
     lista = []
@@ -74,15 +73,26 @@ def aniversariantes(message:tb.types.Message):
     for _, row in df.iterrows():
         nome = row['nome']
         data = row['aniversario'].strftime('%d/%m')
-        lista.append(f". {nome} -> {data}")
+        lista.append(f"- {nome} - {data}")
 
-        reply = "Lista de aniversários: *\n" + "\n".join(lista)
+    reply = "Lista de aniversários: \n" + "\n".join(lista)
 
     bot.reply_to(message, reply)
     
-@bot.message_handler(['chat_id'])
-def pega_id(message:tb.types.Message):
-    bot.reply_to(message, f"ID; {message.chat.id}")
+@bot.message_handler(['presente'])
+def presente(message:tb.types.Message):
+    df = pd.read_excel(planilha, engine="odf", sheet_name="presentes")
+    lista = []
+
+    for _, row in df.iterrows():
+        presente = row['presentes']
+        lista.append(f"{presente}")
+
+    escolha = random.choice(lista)
+
+    bot.reply_to(message, f"Gerador de ideias de presentes 2k25 Ultra Mega Blaster by Darroca Bot \nIdeia de presente: {escolha}")
+
+sc.every().day.at("08:00").do(niver_diario)
 
 bot.infinity_polling()
 
